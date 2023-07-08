@@ -381,3 +381,204 @@ admin.site.register(Question)
 ~~~
 
 Ahora que lo hemos registrado, Django sabe que debe mostrarse en la página de índice de la administración.
+
+## Parte 3: Vistas y plantillas.
+
+### Escribiendo más vistas.
+
+Agregamos algunas vistas más en **polls/views.py**:
+
+~~~
+def detail(request, question_id):
+    return HttpResponse("You're looking at question %s." % question_id)
+
+
+def results(request, question_id):
+    response = "You're looking at the results of question %s."
+    return HttpResponse(response % question_id)
+
+
+def vote(request, question_id):
+    return HttpResponse("You're voting on question %s." % question_id)
+~~~
+
+Conectamos las vistas al **polls.urls** agregando las siguientes path():
+
+~~~
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    # ex: /polls/
+    path("", views.index, name="index"),
+    # ex: /polls/5/
+    path("<int:question_id>/", views.detail, name="detail"),
+    # ex: /polls/5/results/
+    path("<int:question_id>/results/", views.results, name="results"),
+    # ex: /polls/5/vote/
+    path("<int:question_id>/vote/", views.vote, name="vote"),
+]
+~~~
+
+### Escribir vistas que realmente hagan algo.
+
+Todo lo que Django quiere es un HttpResponse, o una excepción.
+
+Mostramos las últimas 5 preguntas de la encuesta en el sistema, separadas por comas, según la fecha de publicación:
+
+~~~
+from django.http import HttpResponse
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by("-pub_date")[:5]
+    output = ", ".join([q.question_text for q in latest_question_list])
+    return HttpResponse(output)
+
+
+# Leave the rest of the views (detail, results, vote) unchanged
+~~~
+
+Crearemos un directorio llamado templates dentro del directorio polls. Dentro de templates, otro directorio llamado polls y dentro un archivo llamado index.html con el siguiente código:
+
+~~~
+{% if latest_question_list %}
+    <ul>
+    {% for question in latest_question_list %}
+        <li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polls are available.</p>
+{% endif %}
+~~~
+
+Actualizamos nuestra vista index **polls/views.py** para usar la plantilla:
+
+~~~
+from django.http import HttpResponse
+from django.template import loader
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by("-pub_date")[:5]
+    template = loader.get_template("polls/index.html")
+    context = {
+        "latest_question_list": latest_question_list,
+    }
+    return HttpResponse(template.render(context, request))
+~~~
+
+### El atajo render().
+
+Es un modismo muy común cargar una plantilla, llenar un contexto y devolver un HttpResponse con el resultado de la plantilla renderizada. Django proporciona un atajo. Aquí está la vista index() completa, reescrita:
+
+~~~
+from django.shortcuts import render
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by("-pub_date")[:5]
+    context = {"latest_question_list": latest_question_list}
+    return render(request, "polls/index.html", context)
+~~~
+
+### Generando un error 404.
+
+Abordaremos ahora la vista details de la pregunta. Aquí la vista:
+
+~~~
+from django.http import Http404
+from django.shortcuts import render
+
+from .models import Question
+
+
+# ...
+def detail(request, question_id):
+    try:
+        question = Question.objects.get(pk=question_id)
+    except Question.DoesNotExist:
+        raise Http404("Question does not exist")
+    return render(request, "polls/detail.html", {"question": question})
+~~~
+
+Si deseamos que el ejemplo anterior funcione rápidamente, crearemos el archivo **detail.html** que contendrá sólo:
+
+~~~
+{{ question }}
+~~~
+
+### El atajo get_object_or_404().
+
+Es un modismo muy común para usar get() y plantear Http404 si el objeto no existe. Django proporciona un atajo. Aquí está la vista detail(), reescrita:
+
+~~~
+from django.shortcuts import get_object_or_404, render
+
+from .models import Question
+
+
+# ...
+def detail(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    return render(request, "polls/detail.html", {"question": question})
+~~~
+
+### Usar el sistema de plantillas.
+
+Así se vería la plantilla **detail.html**:
+
+~~~
+<h1>{{ question.question_text }}</h1>
+<ul>
+{% for choice in question.choice_set.all %}
+    <li>{{ choice.choice_text }}</li>
+{% endfor %}
+</ul>
+~~~
+
+### Eliminación de URL codificadas en plantillas.
+
+Cuando escribimos el enlace a una pregunta en la plantilla **polls/index.html**, el enlace estaba parcialmente codificado de esta manera:
+
+~~~
+<li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>
+~~~
+
+Sin embargo, dado que definimos el argumento de nombre en las funciones path() del módulo polls.urls, podemos eliminar la dependencia de rutas de URL específicas definidas en sus configuraciones de URL utilizando la etiqueta de plantilla:{% url %}
+
+~~~
+<li><a href="{% url 'detail' question.id %}">{{ question.question_text }}</a></li>
+~~~
+
+### Nombres de URL de espacio de nombres.
+
+En el archivo **polls/urls.py**, agregamos un app_name para configurar el espacio de nombres de la aplicación:
+
+~~~
+from django.urls import path
+
+from . import views
+
+app_name = "polls"
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("<int:question_id>/", views.detail, name="detail"),
+    path("<int:question_id>/results/", views.results, name="results"),
+    path("<int:question_id>/vote/", views.vote, name="vote"),
+]
+~~~
+
+Ahora editamos la plantilla **polls/index.html** a:
+
+~~~
+<li><a href="{% url 'polls:detail' question.id %}">{{ question.question_text }}</a></li>
+~~~
