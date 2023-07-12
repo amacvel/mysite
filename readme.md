@@ -675,7 +675,7 @@ Convertiremos nuestra aplicación de encuestas para usar el sistema de vistas ge
 
 ### Modificar URLconf.
 
-Abrimos **polls/urls.py y modificamos:
+Abrimos **polls/urls.py** y modificamos:
 
 ~~~
 from django.urls import path
