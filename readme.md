@@ -1043,3 +1043,43 @@ Siempre que sus pruebas se organicen con sensatez, no se volverán inmanejables.
 - Una TestClass separada para cada modelo o vista.
 - Un método de prueba separado para cada conjunto de condiciones que desea probar.
 - Nombres de métodos de prueba que describen su función.
+
+## Parte 6: Archivos estáticos.
+
+### Personalizamos la apariencia de la aplicación.
+
+Primero, creamos un directorio llamado static en polls. Django buscará archivos estáticos allí, de manera similar a como Django encuentra plantillas dentro de polls/templates/.
+
+Dentro del directorio static que acabamos de crear, creamos otro directorio llamado polls y dentro de ese creamos un archivo llamado style.css. En otras palabras, nuestra hoja de estilo debe estar en **polls/static/polls/style.css**.
+
+Ponemos el siguiente código en la hoja de estilo:
+
+~~~
+li a {
+    color: green;
+}
+~~~
+
+A continuación, agregamos lo siguiente en la parte superior de **polls/templates/polls/index.html**:
+
+~~~
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'polls/style.css' %}">
+~~~
+
+Iniciamos el servidor, volvemos a cargar **http://localhost:8000/polls/** y deberíamos ver que los enlaces de las preguntas son verdes, lo que significa que la hoja de estilo se cargó correctamente.
+
+### Agregar una imagen de fondo.
+
+Creamos un subdirectorio images en **polls/static/polls/**. Dentro de este directorio, agreguemos cualquier archivo de imagen que le gustaría usar como fondo. Para los propósitos de este tutorial, estamos usando un archivo llamado background.png, que tendrá como ruta absoluta polls/static/polls/images/background.png.
+
+Luego, agregamos la referencia a la imagen en la hoja de estilo (**polls/static/polls/style.css**):
+
+~~~
+body {
+    background: white url("images/background.png") no-repeat;
+}
+~~~
+
+Volvemos a cargar **http://localhost:8000/polls/** y deberíamos de ver el fondo cargado.
