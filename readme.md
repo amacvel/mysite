@@ -1083,3 +1083,184 @@ body {
 ~~~
 
 Volvemos a cargar **http://localhost:8000/polls/** y deberíamos de ver el fondo cargado.
+
+## Parte 7: Personalización del sitio de administración.
+
+### Personaliza el formulario de administración.
+
+ A menudo, podríamos personalizar el aspecto y el funcionamiento del formulario de administración. Veamos cómo funciona esto reordenando los campos en el formulario de edición (**polls/admin.py**):
+
+ ~~~
+from django.contrib import admin
+
+from .models import Question
+
+
+class QuestionAdmin(admin.ModelAdmin):
+    fields = ["pub_date", "question_text"]
+
+
+admin.site.register(Question, QuestionAdmin)
+ ~~~
+
+ Seguiremos este patrón: creamos una clase de administrador de modelo, luego la pasamos como el segundo argumento en admin.site.register() en cualquier momento que necesitemos cambiar las opciones de administración para un modelo.
+
+Dividamos el formulario en conjuntos de campos:
+
+~~~
+from django.contrib import admin
+
+from .models import Question
+
+
+class QuestionAdmin(admin.ModelAdmin):
+    fieldsets = [
+        (None, {"fields": ["question_text"]}),
+        ("Date information", {"fields": ["pub_date"]}),
+    ]
+
+
+admin.site.register(Question, QuestionAdmin)
+~~~
+
+El primer elemento de cada tupla fieldsets es el título del conjunto de campos.
+
+### Agregar objetos relacionados.
+
+Registramos **Choice** con el administrador tal como hicimos con **Question**:
+
+~~~
+from django.contrib import admin
+
+from .models import Choice, Question
+
+# ...
+admin.site.register(Choice)
+~~~
+
+Ahora "Opciones" es una opción disponible en el administrador de Django.
+
+Eliminamos la llamada register() para el modelo **Choice**. Luego, editamos **Question** en **polls/admin.py**:
+
+~~~
+from django.contrib import admin
+
+from .models import Choice, Question
+
+
+class ChoiceInline(admin.StackedInline):
+    model = Choice
+    extra = 3
+
+
+class QuestionAdmin(admin.ModelAdmin):
+    fieldsets = [
+        (None, {"fields": ["question_text"]}),
+        ("Date information", {"fields": ["pub_date"], "classes": ["collapse"]}),
+    ]
+    inlines = [ChoiceInline]
+
+
+admin.site.register(Question, QuestionAdmin)
+~~~
+
+Funciona así: hay tres espacios para opciones relacionadas, según lo especificado por extra, y cada vez que regresamos a la página "Cambiar" para un objeto ya creado, obtiene otros tres espacios adicionales.
+
+Sin embargo, un pequeño problema. Necesitamos mucho espacio en la pantalla para mostrar todos los campos para ingresar objetos relacionados de Choice. Por esa razón, Django ofrece una forma tabular de mostrar objetos relacionados en línea. Para usarlo, cambiaremos la declaración ChoiceInline para que diga:
+
+~~~
+class ChoiceInline(admin.TabularInline):
+    ...
+~~~
+
+### Personalizar la lista de cambios del administrador.
+
+Por defecto, Django muestra el str() de cada objeto. Pero a veces sería más útil si pudiéramos mostrar campos individuales. Para hacer eso, usaremos la opción list_display de la administración, que es una tupla de nombres de campo para mostrar, como columnas, en la página de lista de cambios para el objeto (**polls/admin.py**):
+
+~~~
+class QuestionAdmin(admin.ModelAdmin):
+    # ...
+    list_display = ["question_text", "pub_date", "was_published_recently"]
+~~~
+
+Podemos mejorar lo anterior usando el decorador display() en ese método (**polls/models.py**), de la siguiente manera:
+
+~~~
+from django.contrib import admin
+
+
+class Question(models.Model):
+    # ...
+    @admin.display(
+        boolean=True,
+        ordering="pub_date",
+        description="Published recently?",
+    )
+    def was_published_recently(self):
+        now = timezone.now()
+        return now - datetime.timedelta(days=1) <= self.pub_date <= now
+~~~
+
+Editamos **polls/admin.py** nuevamente y agregamos una mejora a la página Question de la lista de cambios: filtros usando la extensión list_filter. Agregamos la siguiente línea a QuestionAdmin:
+
+~~~
+list_filter = ["pub_date"]
+~~~
+
+Debido a que pub_date es un DateTimeField, Django sabe dar las opciones de filtro apropiadas: “Cualquier fecha”, “Hoy”, “Últimos 7 días”, “Este mes”, “Este año”.
+
+Esto se perfila bien. Agreguemos algo de capacidad de búsqueda:
+
+~~~
+search_fields = ["question_text"]
+~~~
+
+Eso agrega un cuadro de búsqueda en la parte superior de la lista de cambios.
+
+### Personaliza la apariencia del administrador.
+
+El administrador de Django funciona con el propio Django, y sus interfaces utilizan el propio sistema de plantillas de Django.
+
+### Personalizando las plantillas de nuestro proyecto.
+
+Creamos un directorio templates en el directorio de nuestro proyecto (el que contiene manage.py).
+
+Abrimos nuestro archivo de configuración (**mysite/settings.py**) y agregamos una opción DIRS en la configuración de TEMPLATES:
+
+~~~
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+~~~
+
+Ahora creamos un directorio llamado admin dentro de templates y copiamos la plantilla **base_site.html** en ese directorio.
+
+Luego, editamos el archivo y reemplazamos el nombre de nuestro sitio como mejor nos parezca:
+
+~~~
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Polls Administration</a></h1>
+{% endblock %}
+~~~
+
+### Personalizando las plantillas de tu aplicación.
+
+Los lectores astutos preguntarán: Pero si DIRS estaba vacío de forma predeterminada, ¿cómo encontró Django las plantillas de administración predeterminadas? La respuesta es que, dado que APP_DIRS está configurado en True, Django busca automáticamente un templates/subdirectorio dentro de cada paquete de aplicación, para usarlo como respaldo (no olvide que django.contrib.admin es una aplicación).
+
+### Personalizar la página de índice de administración.
+
+En una nota similar, es posible que deseemos personalizar la apariencia de la página de índice de administración de Django.
+
+La plantilla a personalizar es **admin/index.html**. (Hacemos lo mismo que en **admin/base_site.html** en la sección anterior: la copiamos del directorio predeterminado a su directorio de plantillas personalizadas).
