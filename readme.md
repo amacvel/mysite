@@ -1264,3 +1264,29 @@ Los lectores astutos preguntarán: Pero si DIRS estaba vacío de forma predeterm
 En una nota similar, es posible que deseemos personalizar la apariencia de la página de índice de administración de Django.
 
 La plantilla a personalizar es **admin/index.html**. (Hacemos lo mismo que en **admin/base_site.html** en la sección anterior: la copiamos del directorio predeterminado a su directorio de plantillas personalizadas).
+
+## Parte 8: Agregar paquetes de terceros.
+
+### Instalación de la barra de herramientas de depuración de Django.
+
+Para instalar una aplicación de terceros como la barra de herramientas, debemos instalar el paquete ejecutando el siguiente comando dentro de un entorno virtual activado:
+
+~~~
+python -m pip install django-debug-toolbar
+~~~
+
+Django Debug Toolbar requiere varios pasos de configuración. Sigámoslos en su [guía de instalación](https://django-debug-toolbar.readthedocs.io/en/latest/installation.html). Consultamos la [página de documentación de los paneles](https://django-debug-toolbar.readthedocs.io/en/latest/panels.html) para obtener más información sobre lo que muestran los paneles.
+
+### Obtener ayuda de otros.
+
+En algún momento nos encontraremos con un problema, por ejemplo, es posible que la barra de herramientas no se muestre. Cuando esto suceda y no podamos resolver el problema, hay diferentes opciones disponibles:
+
+- Si el problema es con un paquete específico, verificaremos si hay una solución de problemas de preguntas frecuentes en la documentación del paquete. Por ejemplo, la barra de herramientas de depuración de Django tiene una sección de sugerencias que describe las opciones de solución de problemas.
+- Buscamos problemas similares en el rastreador de problemas del paquete. Django Debug Toolbar está en GitHub.
+- Consultamos el Foro de Django.
+- Nos unimos al servidor Django Discord.
+- Nos unimos al canal IRC #Django en Libera.chat.
+
+### Instalación de otros paquetes de terceros.
+
+Hay muchos más paquetes de terceros, que podemos encontrar utilizando el fantástico recurso de Django, [Django Packages](https://djangopackages.org/).
